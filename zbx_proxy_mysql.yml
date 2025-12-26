@@ -1,0 +1,55 @@
+services:
+  mariadb-proxy:
+    image: docker.io/mariadb:10
+    container_name: mariadb-proxy
+    restart: unless-stopped
+    environment:
+      # Root password will be generated automatically and is not intended for regular use
+      MARIADB_RANDOM_ROOT_PASSWORD: 1
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD} # Defined in .env file
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - zabbix-net
+    # Enforce UTF-8 encoding required by Zabbix (must be applied before database creation)
+    command:
+      - "mysqld"
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_bin"
+
+  zabbix-proxy:
+    image: docker.io/zabbix/zabbix-proxy-mysql
+    container_name: zabbix-proxy
+    environment:
+      DB_SERVER_HOST: mariadb-proxy
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      # TLS connection mode used by the proxy when connecting to the Zabbix Server
+      # Use "cert" for certificate-based TLS
+      ZBX_TLSCONNECT: psk
+      # TLS modes accepted by the proxy for incoming connections
+      ZBX_TLSACCEPT: psk
+      # Certificate based TLS (not used in this setup)
+      # ZBX_TLSCAFILE:
+      # ZBX_TLSCERTFILE:
+      # ZBX_TLSKEYFILE:
+
+      # PSK based TLS (used in this setup)
+      # Identity string must exactly match the one configured in the Zabbix Server frontend
+      ZBX_TLSPSKIDENTITY: "ZabbixProxy01"
+      # Path inside the container to the PSK file (mounted as read-only)
+      ZBX_TLSPSKFILE: /var/lib/zabbix/enc/proxy_psk.key
+    volumes:
+      - ./proxy-tls:/var/lib/zabbix/enc:ro
+    depends_on:
+      - mariadb-proxy
+
+volumes:
+  db_data:
+
+networks:
+  zabbix-net:
+    driver: bridge
