@@ -7,8 +7,7 @@ This repository offers a ready-to-use Docker Compose setup for Zabbix: Server, P
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Setup](#setup)
-- [Usage](#usage)
-- [TLS / PSK Configuration](#tls--psk-configuration-optional)
+- [TLS / PSK Configuration](#tls--psk-configuration)
 - [Ports](#ports)
 - [License](#license)
 - [Contribution](#contribution)
@@ -22,64 +21,46 @@ This repository offers a ready-to-use Docker Compose setup for Zabbix: Server, P
 
 ## Prerequisites
 
-- Docker >= 24.0
-- Docker Compose >= 2.0
-- `.env` file containing:
-
-  ```text
-  MYSQL_PASSWORD=YourStrongPassword
-  PHP_TZ=Your/Timezone
+Before proceeding, make sure you have Docker or Podman installed, as well as the appropriate Compose tool.
 
 ## Setup
 
-1. Clone the repository:
+Start by cloning the repository and navigating into the project directory:
 
 ```bash
-git clone https://github.com/netns/zbx-docker.git
+git clone <https://github.com/netns/zbx-docker.git>
 cd zbx-docker
 ```
 
-1. Create a .env file if not already present:
+Next, create a `.env` file in the project root if it does not already exist. This file is used to define environment variables required by the containers. For example:
 
 ```py
 MYSQL_PASSWORD=supersecretpassword
 PHP_TZ=America/New_York
 ```
 
-1. Optional: prepare TLS/PSK files for Proxy (see )
-
-| Variable         | Purpose                               |
-| ---------------- | ------------------------------------- |
-| `MYSQL_PASSWORD` | Password for Zabbix database user     |
-| `PHP_TZ`         | Timezone for PHP in the Web container |
-
-## Usage
-
-Start the server or proxy using Docker/Podman:
+Once the environment variables are set, start the server using Docker Compose. Make sure to replace `<Compose File>` with the appropriate compose file name:
 
 ```bash
-docker compose -f [SERVICE] up -d
+docker compose -f <Compose File> up -d
 ```
 
-Example:
+After the containers are running, adjust the Zabbix server self-monitoring configuration. In a containerized environment, 127.0.0.1 does not work as expected, so the Zabbix server must be configured to use the zabbix-agent service and its DNS hostname defined in Docker Compose.
 
-```bash
-docker compose -f zbx_proxy_mysql.yml up -d
-```
+The image below shows an example of the correct self-monitoring configuration:
 
-## TLS / PSK Configuration (Optional)
+![figure](./res/zbx_self_monitor_config.png)
 
-For PSK-based TLS:
+## Proxy TLS / PSK Configuration
 
-- Mount your key file at `./proxy-tls/proxy_psk.key`
+> [!WARNING]
+> Before proceeding, make sure to set the correct permissions for your files to ensure security and proper functionality.
 
-- Ensure `ZBX_TLSCONNECT=psk` and `ZBX_TLSPSKIDENTITY` match the Server configuration
+If you are configuring PSK-based TLS, you need to start by mounting your key file at `./proxy-tls/proxy_psk.key`. After mounting the key, check that the environment variable `ZBX_TLSCONNECT` is set to `psk`. Additionally, make sure that `ZBX_TLSPSKIDENTITY` matches the PSK identity configured on the server. This ensures that the proxy can authenticate correctly with the server using the pre-shared key.
 
-For Certificate-based TLS:
+For Certificate-based TLS, you will need three files: `ca.pem`, `proxy.crt`, and `proxy.key`. Place all of them inside the `./proxy-tls` directory. Next, set `ZBX_TLSCONNECT` to `cert` to indicate that TLS will use certificates for authentication. You must also configure the environment variables `ZBX_TLSCAFILE`, `ZBX_TLSCERTFILE`, and `ZBX_TLSKEYFILE` to point to the corresponding certificate files. This configuration allows the proxy to securely verify the server and establish a trusted TLS connection using certificates.
 
-- Mount `ca.pem`, `proxy.crt`, `proxy.key` in `./proxy-tls`
-
-- Use `ZBX_TLSCONNECT=cert` and set `ZBX_TLSCAFILE`, `ZBX_TLSCERTFILE`, `ZBX_TLSKEYFILE` accordingly
+Following these steps carefully ensures that your proxy communicates securely with the server, whether you are using PSK-based or certificate-based TLS.
 
 ## Ports
 
