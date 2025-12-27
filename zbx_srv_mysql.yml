@@ -61,6 +61,7 @@ services:
       MYSQL_USER: zabbix
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       ZBX_SERVER_HOST: zabbix-server
+      ZBX_SERVER_NAME: "ZABBIX DOCKER"
       PHP_TZ: ${PHP_TZ} # Example: "America/New_York"
     ports:
       - "8080:8080" # HTTP
